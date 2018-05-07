@@ -27,13 +27,16 @@ def fit_line(phs, fqs, valid):
     Returns:
         dt: slope of line
     '''
-    fqs = fqs.compress(valid)
-    dly = phs.compress(valid)
-    B = np.zeros((fqs.size, 1))
-    B[:, 0] = dly
-    A = np.zeros((fqs.size, 1))
-    A[:, 0] = fqs * 2 * np.pi  # ; A[:,1] = 1
-    dt = np.linalg.lstsq(A, B)[0][0][0]
+    if np.sum(valid) == 0:
+        return 0.0
+    else:
+        fqs = fqs.compress(valid)
+        dly = phs.compress(valid)
+        B = np.zeros((fqs.size, 1))
+        B[:, 0] = dly
+        A = np.zeros((fqs.size, 1))
+        A[:, 0] = fqs * 2 * np.pi  # ; A[:,1] = 1
+        dt = np.linalg.lstsq(A, B)[0][0][0]
     return dt
 
 
@@ -91,8 +94,7 @@ def redundant_bl_cal_simple(d1, w1, d2, w2, fqs, window='none', finetune=True, v
         # loop over the linear fits
         for ii, (tau, d) in enumerate(zip(taus, d12_sum)):
             # Throw out zeros, which NaN in the log below
-            valid = np.where(d != 0, 1, 0)
-            valid = np.logical_and(valid, np.logical_and(fqs > .11, fqs < .19))
+            valid = np.where(d12_wgt[ii] != 0, 1, 0)
             dly = np.angle(d * np.exp(-2j * np.pi * tau * fqs))
             dt = fit_line(dly, fqs, valid)
             dts.append(dt)
@@ -102,7 +104,7 @@ def redundant_bl_cal_simple(d1, w1, d2, w2, fqs, window='none', finetune=True, v
     info = {'dtau': dts, 'mx': mxs}
     if verbose:
         print(info, taus, taus + dts)
-    return (taus + dts) / 1e9  # convert to seconds
+    return (taus + dts) / 1e9 # convert to seconds
 
 
 class FirstCalRedundantInfo(omnical.info.RedundantInfo):

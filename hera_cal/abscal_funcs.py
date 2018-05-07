@@ -588,21 +588,33 @@ def delay_slope_lincal(model, data, antpos, wgts=None, refant=None, df=9.765625e
     ratio_offsets = []
     ratio_wgts = []
     for i, k in enumerate(keys):
-        ratio = data[k]/model[k]
+        d1, d2 = data[k], model[k]
+        w1, w2 = wgts[k], wgts[k]
 
-        # replace nans
-        nan_select = np.isnan(ratio)
-        ratio[nan_select] = 0.0
-        wgts[k][nan_select] = 0.0
-
-        # replace infs
-        inf_select = np.isinf(ratio)
-        ratio[inf_select] = 0.0
-        wgts[k][inf_select] = 0.0
-
-        # get delays
-        dly, offset = fft_dly(ratio, wgts=wgts[k], df=df, medfilt=medfilt, kernel=kernel, time_ax=time_ax, 
-                              freq_ax=freq_ax, window=window, edge_cut=edge_cut)
+        freqs = np.linspace(.1, .2, d1.shape[freq_ax], endpoint=False)
+        assert(np.isclose(np.median(np.diff(freqs))*1e9, df))
+        assert(time_ax==0)
+        assert(freq_ax==1)
+        if window == None:
+            window = 'none'
+        dly = firstcal.redundant_bl_cal_simple(d1, w1, d2, w2, freqs, window=window)
+        
+        
+#        ratio = data[k]/model[k]
+#
+#        # replace nans
+#        nan_select = np.isnan(ratio)
+#        ratio[nan_select] = 0.0
+#        wgts[k][nan_select] = 0.0
+#
+#        # replace infs
+#        inf_select = np.isinf(ratio)
+#        ratio[inf_select] = 0.0
+#        wgts[k][inf_select] = 0.0
+#
+#        # get delays
+#        dly, offset = fft_dly(ratio, wgts=wgts[k], df=df, medfilt=medfilt, kernel=kernel, time_ax=time_ax, 
+#                              freq_ax=freq_ax, window=window, edge_cut=edge_cut)
 
         # set nans to zero
         rwgts = np.nanmean(wgts[k], axis=freq_ax, keepdims=True)
@@ -611,11 +623,11 @@ def delay_slope_lincal(model, data, antpos, wgts=None, refant=None, df=9.765625e
         rwgts[isnan] = 0.0
 
         ratio_delays.append(dly)
-        ratio_offsets.append(offset)
+#         ratio_offsets.append(offset)
         ratio_wgts.append(rwgts)
 
     ratio_delays = np.array(ratio_delays)
-    ratio_offsets = np.array(ratio_offsets)
+#     ratio_offsets = np.array(ratio_offsets)
     ratio_wgts = np.array(ratio_wgts)
 
     # form ydata
